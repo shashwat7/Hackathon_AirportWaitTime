@@ -24,6 +24,10 @@ libraryDependencies += "org.apache.kafka" % "kafka-clients" % "0.8.2.0"
 
 libraryDependencies += "org.apache.kafka" % "kafka_2.10" % "0.8.2.0"
 
+libraryDependencies += "com.databricks" % "spark-csv_2.10" % "1.5.0"
+
 resolvers += "Job Server Bintray" at "https://dl.bintray.com/spark-jobserver/maven"
 
 resolvers += "Spark Packages Repo" at "https://dl.bintray.com/spark-packages/maven"
+
+

@@ -8,6 +8,7 @@ import org.apache.spark.streaming.{Seconds, StreamingContext}
 import org.apache.spark.streaming.kafka._
 import org.joda.time.format.DateTimeFormat
 import kafka.serializer.StringDecoder
+import org.apache.spark.sql.SQLContext
 import org.apache.spark.streaming.dstream.{DStream, InputDStream}
 
 /**
@@ -19,7 +20,7 @@ object CalculateRate {
   val FORMATTER = DateTimeFormat.forPattern("dd-MMM-yyyy HH:mm:ss")
 
   val usage = """
-    Usage: [-t table] [-k keyspace] [-kb kafka_broker] [-kt kafka_broker] [-c spark_conf]
+    Usage: [-t table] [-k keyspace] [-kb kafka_broker] [-eq kafka_broker] [-c spark_conf]
     -t === type of copy - table to table/keyspace to kespace
     -o === file containing keyspaces and table names
     -f === configuration file path
@@ -68,20 +69,24 @@ object CalculateRate {
     val sparkConf = getSparkConf(conf)
     val sc = new SparkContext(sparkConf)
     val ssc = new StreamingContext(sc, Seconds(60))
+    val sqlContext = new SQLContext(sc)
 
     val kafkaParams = Map[String, String]("metadata.broker.list" -> kafka_broker, "auto.offset.reset" -> "smallest")
     val enqueue = KafkaUtils.createDirectStream[String, String, StringDecoder, StringDecoder](ssc, kafkaParams, kafka_enqueue_topic)
     val dequeue: InputDStream[(String, String)] = KafkaUtils.createDirectStream[String, String, StringDecoder, StringDecoder](ssc, kafkaParams, kafka_dequeue_topic)
 
-    saveQueueConsumptionRate(cassandra_keyspace, dequeue.map(_._2))
+    prediction.QueueSize.readFlightSchedules(sqlContext, "C:\\Users\\srastogi\\Dropbox\\Hackathon\\ADN Extract").show(20)
 
-    // Find number of people in the queue at any given minute
-    numberOfPeopleInTheQueue(calculateCountPerMinute(enqueue.map(_._2)), calculateCountPerMinute(dequeue.map(_._2)))
-      .map{case (time, count) => TimeVsSize(time._1, time._2, time._3, time._4, time._5, count)}
-      .saveToCassandra(cassandra_keyspace, "time_vs_size")
-
-    ssc.start()
-    ssc.awaitTermination()
+//
+//    saveQueueConsumptionRate(cassandra_keyspace, dequeue.map(_._2))
+//
+//    // Find number of people in the queue at any given minute
+//    numberOfPeopleInTheQueue(calculateCountPerMinute(enqueue.map(_._2)), calculateCountPerMinute(dequeue.map(_._2)))
+//      .map{case (time, count) => TimeVsSize(time._1, time._2, time._3, time._4, time._5, count)}
+//      .saveToCassandra(cassandra_keyspace, "time_vs_size")
+//
+//    ssc.start()
+//    ssc.awaitTermination()
   }
 
   def saveQueueConsumptionRate(cassandra_keyspace: String, dequeue: DStream[String]) = {
